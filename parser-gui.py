@@ -6,6 +6,8 @@ import unicodedata
 import tkinter as tk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from datetime import datetime
+import os
+from PIL import Image, ImageTk
 
 
 class MainWindow(tk.Frame):
@@ -16,14 +18,18 @@ class MainWindow(tk.Frame):
         self.create_widgets()
         current_year = datetime.now().year
         self.content = self.my_parser(current_year)
+        last_price = self.content['prices'][-1]
+        last_price_date = self.content['dates'][-1]
+        self.message.set(
+            f'Najnowsza cena: {last_price} z dnia: {last_price_date}')
         self.create_chart(self.content)
 
     def create_widgets(self):
         menubar = tk.Menu(self.root)
         self.root.config(menu=menubar)
         file_menu = tk.Menu(menubar, tearoff=0)
-        file_menu.add_command(label='Exit', command=exit)
-        menubar.add_cascade(label="File", menu=file_menu)
+        file_menu.add_command(label='Zakończ', command=self._exit)
+        menubar.add_cascade(label="Plik", menu=file_menu)
 
         self.chart_canvas = tk.Frame(master=self.root)
         self.chart_canvas.grid(row=1, column=0, columnspan=2)
@@ -46,6 +52,14 @@ class MainWindow(tk.Frame):
         self.label = tk.Label(master=self.root, textvariable=self.message)
         self.label.grid(row=3, column=0, columnspan=2, sticky='W')
 
+        self.copyright = tk.Label(
+            master=self.root, text='(C) S.Kwiatkowski 2020')
+        self.copyright.grid(row=0, column=1, sticky='E')
+
+    def _exit(self):
+        self.root.quit()     # stops mainloop
+        self.root.destroy()  # this is necessary on Windows
+
     def on_entry_in(self, event):
         self.search_entry.config(fg='black')
         self.search_variable.set('')
@@ -56,19 +70,20 @@ class MainWindow(tk.Frame):
     def create_chart(self, content):
         if content is not None:
             year = content.get('year')
-            fuel = content.get('fuel')
             dates = content.get('dates')
             prices = content.get('prices')
 
             fig, ax = plt.subplots()
-            ax.set_title(f'Cena dla paliwa {fuel} - {year} rok')
+            ax.set_title(f'Cena dla paliwa {self.fuel} - {year} rok')
             ax.set_xlabel('Data')
             ax.set_ylabel('Cena')
             fig.autofmt_xdate()
             ax.grid(True)
             ax.xaxis.set_major_locator(plt.MaxNLocator(10))
             ax.plot(dates, prices, c='#CA3F62')
-
+            if not os.path.exists('data'):
+                os.makedirs('data')
+            fig.savefig(f'data/{self.fuel}-{year}.png')
             canvas = FigureCanvasTkAgg(fig, master=self.chart_canvas)
             canvas.draw()
             canvas.get_tk_widget().grid(row=0, column=0)
@@ -87,10 +102,10 @@ class MainWindow(tk.Frame):
             if table_content:
                 table_content = table_content[::-1]
                 table_content = [x for x in table_content if x != 'zł/m']
-                print(table_content)
+                # print(table_content)
                 content = {}
                 content['year'] = year
-                content['fuel'] = table_content.pop()
+                self.fuel = table_content.pop()
                 content['dates'] = table_content[1::2]
                 prices = table_content[::2]
                 prices = [price.replace(' ', '') for price in prices]
@@ -100,14 +115,23 @@ class MainWindow(tk.Frame):
                 return self.content
             else:
                 self.message.set('Brak danych dla podanego roku')
+                for child in self.chart_canvas.winfo_children():
+                    child.destroy()
 
     def _search(self):
         year = self.search_variable.get()
         if year.isdigit():
-            self.create_chart(self.my_parser(year))
-        else:
-            self.search_entry.config(fg='grey')
-            self.search_variable.set("Podaj rok")
+            if os.path.exists(f'data/{self.fuel}-{year}.png'):
+                image = Image.open(f'data/{self.fuel}-{year}.png')
+                self.imagetk = ImageTk.PhotoImage(image)
+                self.img = tk.Label(image=self.imagetk,
+                                    master=self.chart_canvas)
+                self.img.grid(row=0, column=0, sticky='NSWE')
+                self.message.set('Ok')
+            else:
+                self.create_chart(self.my_parser(year))
+        self.search_entry.config(fg='black')
+        self.search_variable.set("")
 
 
 def main():
