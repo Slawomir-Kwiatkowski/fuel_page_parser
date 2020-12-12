@@ -14,22 +14,22 @@ class MainWindow(tk.Frame):
     def __init__(self, root):
         super().__init__(root)
         self.root = root
-        root.title('Hurtowe ceny paliwa')
+        root.title('Hurtowe ceny paliwa') #Wholesale fuel prices
         self.create_widgets()
         current_year = datetime.now().year
         self.content = self.my_parser(current_year)
         last_price = self.content['prices'][-1]
         last_price_date = self.content['dates'][-1]
         self.message.set(
-            f'Najnowsza cena: {last_price} z dnia: {last_price_date}')
+            f'Najnowsza cena: {last_price} z dnia: {last_price_date}') #last price
         self.create_chart(self.content)
 
     def create_widgets(self):
         menubar = tk.Menu(self.root)
         self.root.config(menu=menubar)
         file_menu = tk.Menu(menubar, tearoff=0)
-        file_menu.add_command(label='Zakończ', command=self._exit)
-        menubar.add_cascade(label="Plik", menu=file_menu)
+        file_menu.add_command(label='Zakończ', command=self._exit) 
+        menubar.add_cascade(label="Plik", menu=file_menu) # File menu
 
         self.chart_canvas = tk.Frame(master=self.root)
         self.chart_canvas.grid(row=1, column=0, columnspan=2)
@@ -74,12 +74,12 @@ class MainWindow(tk.Frame):
             prices = content.get('prices')
 
             fig, ax = plt.subplots()
-            ax.set_title(f'Cena dla paliwa {self.fuel} - {year} rok')
-            ax.set_xlabel('Data')
-            ax.set_ylabel('Cena')
+            ax.set_title(f'Cena dla paliwa {self.fuel} - {year} rok') #title: price for fuel and year
+            ax.set_xlabel('Data') #Date label
+            ax.set_ylabel('Cena') #Price label
             fig.autofmt_xdate()
             ax.grid(True)
-            ax.xaxis.set_major_locator(plt.MaxNLocator(10))
+            ax.xaxis.set_major_locator(plt.MaxNLocator(10)) #fewer dates
             ax.plot(dates, prices, c='#CA3F62')
             if not os.path.exists('data'):
                 os.makedirs('data')
